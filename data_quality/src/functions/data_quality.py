@@ -1,6 +1,6 @@
 from lib_unit_tests_dq.functions.parse_yaml import ParseYaml
 from pyspark.sql.functions import col
-from pyspark.sql.types import StringType, IntegerType, FloatType, DoubleType, DateType, TimestampType
+from pyspark.sql.types import StringType, IntegerType, FloatType, DoubleType, DateType, TimestampType,StructField,StructType
 
 class SparkDataQuality:
     def __init__(self, spark, schema_registry_path):
@@ -20,14 +20,12 @@ class SparkDataQuality:
         return self.dict_types.get(yaml_type.lower())
         
     def validate_schema(self, df, table_name):
-        schema = ParseYaml.parse(f"{self.schema_registry_path}{table_name}.yaml")
-        for col_info in schema[table_name]:
-            col_name = col_info['column']
-            col_type = self.get_spark_type(col_info['type'])
-            if col_name not in df.columns:
-                raise ValueError(f"Column {col_name} not found in DataFrame, expected {col_name} to be present in DataFrame")
-            if col_type != df.schema[col_name].dataType:
-                raise ValueError(f"Column {col_name} has wrong type, expected {col_type} but got {df.schema[col_name].dataType}")
+        yaml_data = ParseYaml.parse(f"{self.schema_registry_path}{table_name}.yaml")
+        columns = yaml_data[table_name]
+        fields = [StructField(col["column"],self.get_spark_type(col["type"]), nullable=col["nullable"]) for col in columns]
+        schema = StructType(fields)
+        if df.schema != schema:
+            raise ValueError(f"Schema mismatch for table {table_name}, expected schema {schema} but got {df.schema}")
         return True
     
     def validate_nulls(self, df, table_name):

@@ -1,7 +1,7 @@
 people:
   - column: Name
     type: string
-    nullable: false
+    nullable: true
   - column: Age
     type: string
     nullable: true
